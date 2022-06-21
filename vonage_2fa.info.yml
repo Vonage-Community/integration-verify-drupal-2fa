@@ -1,0 +1,7 @@
+name: Vonage Verify 2FA
+description: Enables users to use 2-Factor Authentication within Drupal
+package: Custom
+
+type: module
+core: 8.x
+core_version_requirement: ^8 || ^9
