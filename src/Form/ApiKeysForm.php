@@ -1,9 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains Drupal\welcome\Form\MessagesForm.
- */
 namespace Drupal\vonage_2fa\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
@@ -15,7 +11,7 @@ class ApiKeysForm extends ConfigFormBase {
 	 */
 	protected function getEditableConfigNames() {
 		return [
-			'vonage_2fa.adminsettings',
+			'vonage_2fa.apisettings',
 		];
 	}
 
@@ -30,7 +26,7 @@ class ApiKeysForm extends ConfigFormBase {
 	 * {@inheritdoc}
 	 */
 	public function buildForm(array $form, FormStateInterface $form_state) {
-		$config = $this->config('vonage_2fa.adminsettings');
+		$config = $this->config('vonage_2fa.apisettings');
 
 		$form['api_key'] = [
 			'#type' => 'textfield',
@@ -55,7 +51,7 @@ class ApiKeysForm extends ConfigFormBase {
 	public function submitForm(array &$form, FormStateInterface $form_state) {
 		parent::submitForm($form, $form_state);
 
-		$this->config('vonage_2fa.adminsettings')
+		$this->config('vonage_2fa.apisettings')
 		     ->set('api_key', $form_state->getValue('api_key'))
 			 ->set('api_secret', $form_state->getValue('api_secret'))
 		     ->save();
