@@ -1,8 +1,8 @@
 <?php
 
-namespace Drupal\custom_events_and_subscribers\EventSubscriber;
+namespace Drupal\vonage_2fa\EventSubscriber;
 
-use Drupal\custom_events_and_subscribers\Event\UserLoginEvent;
+use Drupal\vonage_2fa\Event\UserLoginEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 

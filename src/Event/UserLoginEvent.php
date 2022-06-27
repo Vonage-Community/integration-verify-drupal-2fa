@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\custom_events_and_subscribers\Event;
+namespace Drupal\vonage_2fa\Event;
 
 use Drupal\user\UserInterface;
 use Symfony\Contracts\EventDispatcher\Event;

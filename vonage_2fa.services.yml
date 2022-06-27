@@ -1,5 +1,5 @@
 services:
   custom_events_and_subscribers.user_login:
-    class: \Drupal\custom_events_and_subscribers\EventSubscriber\LoginEventSubscriber
+    class: \Drupal\vonage_2fa\EventSubscriber\LoginEventSubscriber
     tags:
       - { name: 'event_subscriber' }
