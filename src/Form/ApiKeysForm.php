@@ -42,6 +42,13 @@ class ApiKeysForm extends ConfigFormBase {
 			'#default_value' => $config->get('api_secret'),
 		];
 
+        $form['enabled'] = [
+            '#type' => 'checkbox',
+            '#title' => $this->t('Enabled'),
+            '#description' => $this->t('Check to enable 2FA'),
+            '#default_value' => $config->get('enabled')
+        ];
+
 		return parent::buildForm($form, $form_state);
 	}
 
@@ -54,6 +61,7 @@ class ApiKeysForm extends ConfigFormBase {
 		$this->config('vonage_2fa.apisettings')
 		     ->set('api_key', $form_state->getValue('api_key'))
 			 ->set('api_secret', $form_state->getValue('api_secret'))
+             ->set('enabled', $form_state->getValue('enabled'))
 		     ->save();
 	}
 }

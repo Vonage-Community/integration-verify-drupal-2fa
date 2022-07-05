@@ -1,0 +1,113 @@
+<?php
+
+/**
+ * @file
+ * Contains vonage_2fa.module.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\user\UserInterface;
+use \Symfony\Component\HttpFoundation\RedirectResponse;
+use Drupal\Core\Url;
+use Drupal\webform\Utility\WebformFormHelper;
+
+
+const RESPONSE_VERIFICATION_PASSED = 'SUCCESS';
+
+/**
+ * Implements hook_form_alter().
+ */
+function vonage_2fa_form_alter(&$form, FormStateInterface $form_state, $form_id)
+{
+    // is it the login form
+    if ($form_id === 'user_login_form') {
+//        dump($form, $form_state);
+        $config = \Drupal::config('vonage_2fa.apisettings');
+        // is 2FA on?
+        if (!$config->get('enabled')) {
+            return;
+        }
+        $apiKey = $config->get('api_key');
+        $apiSecret = $config->get('api_secret');
+
+        $client = \Drupal::httpClient();
+        $request = \Drupal::requestStack()->getCurrentRequest();
+        $session = $request->getSession();
+        $requestId = $session->get('vonage2fa_requestId_saved', null);
+
+        if ($requestId) {
+            $response = $client->get("https://api.nexmo.com/verify/search/json?&api_key=$apiKey&api_secret=$apiSecret&request_id=$requestId");
+            $responseBody = json_decode($response->getBody(), true);
+
+            if ($responseBody['status'] === RESPONSE_VERIFICATION_PASSED) {
+                return;
+            }
+
+            $session->remove('vonage2fa_requestId_saved');
+            $response = new RedirectResponse(Url::fromRoute('user.login')->toString());
+            $response->send();
+        }
+
+        // If the request is a GET it's the first time or I'm being re-rendered with a pin
+        if ($request->getMethod() === 'GET') {
+            // if the pin was 1, I need to add the pin field
+            // you cannot remove the user and pass fields because drupal
+            if ($request->query->get('pin')) {
+
+                $form['pin'] = [
+                    '#type' => 'textfield',
+                    '#title' => 'PIN',
+                    '#description' => 'Enter the PIN sent to your number ending in XXXX'
+                ];
+
+                $formValues = $form_state->getUserInput();
+                $userEntity = user_load_by_name($formValues['name']);
+                $userDataService = \Drupal::service('user.data');
+                $phoneNumber = $userDataService->get('vonage_2fa', $userEntity->id(), 'phone_number');
+
+                $response = $client->post("https://api.nexmo.com/verify/json?&api_key=$apiKey&api_secret=$apiSecret&number=$phoneNumber&workflow_id=6&brand=Drupal2FA");
+                $responseBody = json_decode($response->getBody(), true);
+                $session->set('vonage2fa_requestId', $responseBody['request_id']);
+            }
+
+            return;
+        }
+
+        if ($request->getMethod() === 'POST') {
+            // Is 2FA on for this user
+            $formValues = $form_state->getUserInput();
+            $userEntity = user_load_by_name($formValues['name']);
+            // If no user exists by this name send them back, Drupal will handle the error
+            if (!$userEntity) {
+                return;
+            }
+
+            $userDataService = \Drupal::service('user.data');
+            $enabled = $userDataService->get('vonage_2fa', $userEntity->id(), 'enabled');
+
+            if (!$enabled) {
+                return;
+            }
+
+            // You have given me a PIN to verify
+            if (array_key_exists('pin', $formValues)) {
+                $pinResponse = $client->get('https://api.nexmo.com/verify/check/json?&api_key=$apiKey&api_secret=$apiSecret&request_id=$requestId&code=$pin');
+                $pinResponseBody = json_decode($pinResponse->getBody(), true);
+
+                if ($pinResponseBody['status'] === RESPONSE_PIN_OK) {
+                    $session->remove('vonage2fa_requestId');
+                    $session->set('vonage2fa_requestId_saved', $pinResponseBody['request_id']);
+                    return;
+                }
+
+                if ($pinResponseBody['status'] === RESPONSE_PIN_INVALID) {
+                    \Drupal::messenger()->addError('Your PIN was invalid');
+                }
+            }
+
+            // You are trying to log in for the first time and I need to give you a new login form with PIN
+            $response = new RedirectResponse(Url::fromRoute('user.login')->toString() . '?pin=1');
+            $response->send();
+        }
+    }
+}
