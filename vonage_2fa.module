@@ -13,6 +13,8 @@ use Drupal\webform\Utility\WebformFormHelper;
 
 
 const RESPONSE_VERIFICATION_PASSED = 'SUCCESS';
+const RESPONSE_PIN_OK = "0";
+const RESPONSE_PIN_INVALID = "16";
 
 /**
  * Implements hook_form_alter().
@@ -21,7 +23,6 @@ function vonage_2fa_form_alter(&$form, FormStateInterface $form_state, $form_id)
 {
     // is it the login form
     if ($form_id === 'user_login_form') {
-//        dump($form, $form_state);
         $config = \Drupal::config('vonage_2fa.apisettings');
         // is 2FA on?
         if (!$config->get('enabled')) {
@@ -48,6 +49,7 @@ function vonage_2fa_form_alter(&$form, FormStateInterface $form_state, $form_id)
             $response->send();
         }
 
+
         // If the request is a GET it's the first time or I'm being re-rendered with a pin
         if ($request->getMethod() === 'GET') {
             // if the pin was 1, I need to add the pin field
@@ -59,9 +61,7 @@ function vonage_2fa_form_alter(&$form, FormStateInterface $form_state, $form_id)
                     '#title' => 'PIN',
                     '#description' => 'Enter the PIN sent to your number ending in XXXX'
                 ];
-
-                $formValues = $form_state->getUserInput();
-                $userEntity = user_load_by_name($formValues['name']);
+                $userEntity = user_load_by_name($form_state->getValue('name'));
                 $userDataService = \Drupal::service('user.data');
                 $phoneNumber = $userDataService->get('vonage_2fa', $userEntity->id(), 'phone_number');
 
@@ -106,6 +106,8 @@ function vonage_2fa_form_alter(&$form, FormStateInterface $form_state, $form_id)
             }
 
             // You are trying to log in for the first time and I need to give you a new login form with PIN
+            // I need to set the form values here I think
+
             $response = new RedirectResponse(Url::fromRoute('user.login')->toString() . '?pin=1');
             $response->send();
         }
