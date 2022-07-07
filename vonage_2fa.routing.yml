@@ -13,3 +13,11 @@ vonage_2fa.user_settings_route:
     _form: '\Drupal\vonage_2fa\Form\VonageUserSettingsForm'
   requirements:
     _permission: 'access user profiles, access content'
+
+vonage_2fa.pin_verify:
+  path: '/user/login/verify'
+  defaults:
+    _title: '2 Factor Authentication'
+    _form: \Drupal\vonage_2fa\Form\VerifyPinForm
+  requirements:
+    _permission: "access content"

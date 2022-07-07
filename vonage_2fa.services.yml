@@ -1,0 +1,5 @@
+services:
+  vonage_2fa.event_subscriber:
+    class: Drupal\vonage_2fa\EventSubscriber\EventSubscriber
+    tags:
+      - { name: event_subscriber }
