@@ -10,14 +10,26 @@ use Symfony\Component\HttpKernel\KernelEvents;
 
 class EventSubscriber implements EventSubscriberInterface {
   public function checkFor2FA(RequestEvent $event) {
+    $config = \Drupal::config('vonage_2fa.apisettings');
+    if (!$config->get('enabled')) {
+      return;
+    }
+
     $route = Url::fromRoute('vonage_2fa.pin_verify')->toString();
 
-    if ($event->getRequest()->getRequestUri() === '/user/logout') {
+    if ($event->getRequest()->getRequestUri() === '/' . \Drupal::languageManager()->getCurrentLanguage()->getId() . '/user/logout') {
       return;
     }
 
     if (\Drupal::currentUser()->isAuthenticated()) {
       $session = $event->getRequest()->getSession();
+
+      $userDataService = \Drupal::service('user.data');
+      $enabled = $userDataService->get('vonage_2fa', \Drupal::currentUser()->id(), 'enabled');
+
+      if (!$enabled) {
+          return;
+      }
 
       if ($session->has('2fa_verified')) {
         if ($event->getRequest()->getRequestUri() === $route) {
@@ -30,11 +42,8 @@ class EventSubscriber implements EventSubscriberInterface {
           }
         }
 
-        // Send the verify pin and save it off?
-
         return;
       }
-
 
       if ($event->getRequest()->getRequestUri() !== $route) {
         $session->set('2fa_redirect_info', [
