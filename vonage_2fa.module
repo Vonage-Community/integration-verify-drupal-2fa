@@ -7,7 +7,7 @@
 use Drupal\Core\Session\AccountInterface;
 
 function vonage_2fa_user_logout(AccountInterface $account) {
-    \Drupal::request()->getSession()->remove('2fa_verified');
-    \Drupal::request()->getSession()->remove('2fa_redirect_info');
+    \Drupal::request()->getSession()->remove('vonage_2fa_redirect_info');
+    \Drupal::request()->getSession()->remove('vonage_2fa_state');
     \Drupal::request()->getSession()->save();
 }
