@@ -9,7 +9,23 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
 class EventSubscriber implements EventSubscriberInterface {
-  public function checkFor2FA(RequestEvent $event) {
+    protected $client;
+    protected $apiKey;
+    protected $apiSecret;
+    protected $phoneNumber;
+
+    const RESPONSE_VERIFICATION_SENT = '0';
+
+    public function __construct()
+    {
+        $config = \Drupal::config('vonage_2fa.apisettings');
+        $this->client = \Drupal::httpClient();
+        $this->apiKey = $config->get('api_key');
+        $this->apiSecret = $config->get('api_secret');
+        $this->userDataService = \Drupal::service('user.data');
+    }
+
+    public function checkFor2FA(RequestEvent $event) {
     $config = \Drupal::config('vonage_2fa.apisettings');
     if (!$config->get('enabled')) {
       return;
@@ -41,8 +57,28 @@ class EventSubscriber implements EventSubscriberInterface {
             return;
           }
         }
-
         return;
+      } else {
+          try {
+              $phoneNumber = $this->userDataService->get('vonage_2fa', \Drupal::currentUser()->id(), 'phone_number');
+              $response = $this->client->get("https://api.nexmo.com/verify/json?&api_key=$this->apiKey&api_secret=$this->apiSecret&number=$phoneNumber&workflow_id=6&brand=Drupal2FA");
+          } catch (\GuzzleHttp\Exception\ClientException $exception) {
+              \Drupal::messenger()->adderror('There is an error with your Two-Factor Authentication provider, please check your account.');
+              $url = Url::fromRoute('vonage_2fa.error');
+              return new RedirectResponse($url->toString());
+          }
+
+          $responseBody = json_decode($response->getBody()->getContents(), true);
+
+          if ($responseBody['status'] !== self::RESPONSE_VERIFICATION_SENT) {
+              \Drupal::messenger()->addError('There is a problem with your Two Factor Authentication provider, please contact your administrator', TRUE);
+              $url = Url::fromRoute('vonage_2fa.error');
+              return new RedirectResponse($url->toString());
+          }
+
+          $session = $event->getRequest()->getSession();
+          $session->set('request_id', $responseBody['request_id']);
+          $session->save();
       }
 
       if ($event->getRequest()->getRequestUri() !== $route) {

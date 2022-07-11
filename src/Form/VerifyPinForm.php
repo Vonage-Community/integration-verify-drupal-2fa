@@ -4,11 +4,12 @@ namespace Drupal\vonage_2fa\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Drupal\Core\Url;
 
 class VerifyPinForm extends FormBase
 {
-  const RESPONSE_VERIFICATION_PASSED = 'SUCCESS';
-  const RESPONSE_VERIFICATION_SENT = '0';
+  const RESPONSE_VERIFICATION_PASSED = '0';
 
     protected $client;
     protected $apiKey;
@@ -28,30 +29,24 @@ class VerifyPinForm extends FormBase
     public function buildForm(array $form, FormStateInterface $form_state)
    {
       $phoneNumberTail = substr($this->phoneNumber, -4);
-      $response = $this->client->post("https://api.nexmo.com/verify/json?&api_key=$this->apiKey&api_secret=$this->apiSecret&number=$this->phoneNumber&workflow_id=6&brand=Drupal2FA");
-      $responseBody = json_decode($response->getBody()->getContents(), true);
+      $requestId = \Drupal::request()->getSession()->get('request_id');
 
-       if ($responseBody['status'] !== self::RESPONSE_VERIFICATION_SENT) {
-           $form_state->setError('There was a problem setting up the 2FA form');
-           return;
-       }
-
-      $requestId = $responseBody['request_id'];
-
-      return [
-      'pin' => [
+      $form['pin'] = [
         '#type' => 'textfield',
         '#title' => $this->t("Enter the 4-6 digit pin that was sent to your number ending in $phoneNumberTail"),
-      ],
-      'request_id' => [
+      ];
+
+      $form['request_id'] = [
         '#type' => 'hidden',
         '#value' => $requestId
-      ],
-      'submit' => [
+      ];
+
+      $form['submit'] = [
         '#type' => 'submit',
         '#value' => $this->t('Submit'),
-      ]
-    ];
+      ];
+
+      return $form;
    }
 
   public function getFormId()
@@ -61,9 +56,10 @@ class VerifyPinForm extends FormBase
 
   public function submitForm(array &$form, FormStateInterface $form_state)
   {
-    // Should have been a successful validate, so we can just flag they authed
     $session = \Drupal::request()->getSession();
+    $session->remove('request_id');
     $session->set('2fa_verified', true);
+    $session->save();
   }
 
   public function validateForm(array &$form, FormStateInterface $form_state)
@@ -76,8 +72,7 @@ class VerifyPinForm extends FormBase
     }
 
     $requestId = $form_state->getValue('request_id');
-
-    $response = $this->client->get("https://api.nexmo.com/verify/check/json?&api_key=$apiKey&api_secret=$apiSecret&request_id=$requestId&code=$pin");
+    $response = $this->client->get("https://api.nexmo.com/verify/check/json?&api_key=$this->apiKey&api_secret=$this->apiSecret&request_id=$requestId&code=$pin");
     $responseBody = json_decode($response->getBody()->getContents(), true);
 
     if ($responseBody['status'] !== self::RESPONSE_VERIFICATION_PASSED) {

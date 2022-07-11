@@ -21,3 +21,11 @@ vonage_2fa.pin_verify:
     _form: \Drupal\vonage_2fa\Form\VerifyPinForm
   requirements:
     _permission: "access content"
+
+vonage_2fa.error:
+  path: '/user/login/error'
+  defaults:
+    _controller: '\Drupal\vonage_2fa\Controller\PageErrorController::content'
+    _title: 'Two-Factor Authentication Error'
+  requirements:
+    _permission: 'access content'
