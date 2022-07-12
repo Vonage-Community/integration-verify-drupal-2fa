@@ -4,10 +4,3 @@ vonage_2fa.api_keys_settings_link:
   parent: system.admin_config_system
   route_name: vonage_2fa.api_keys_settings_route
   weight: 100
-
-vonage_2fa.user_settings_link:
-  title: 'Vonage 2FA User Settings'
-  description: 'Edit your 2FA settings'
-  parent: system.admin_config_system
-  route_name: vonage_2fa.user_settings_route
-  weight: 100
