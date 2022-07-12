@@ -4,10 +4,58 @@
  * @file
  * Contains vonage_2fa.module.
  */
+
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
 
 function vonage_2fa_user_logout(AccountInterface $account) {
     \Drupal::request()->getSession()->remove('vonage_2fa_redirect_info');
     \Drupal::request()->getSession()->remove('vonage_2fa_state');
     \Drupal::request()->getSession()->save();
+}
+
+function vonage_2fa_entity_base_field_info(EntityTypeInterface $entity_type) {
+  if ($entity_type->id() === 'user') {
+    $fields['vonage_2fa_phone_number'] = BaseFieldDefinition::create('string')
+      ->setLabel(t('Phone Number'))
+      ->setDescription(t('Phone number that will recieve a 2FA pin'))
+      ->setDisplayOptions(
+        'form',
+        [
+          'type' => 'string_text_field',
+          'weight' => 30,
+          'default_value' => ''
+        ]
+      );
+
+    return $fields;
+  }
+}
+
+function vonage_2fa_form_user_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  array_unshift($form['#validate'], 'vonage_2fa_user_form_validate');
+  array_unshift($form['actions']['submit']['#submit'], 'vonage_2fa_user_form_submit');
+
+  $form['vonage_2fa_phone_number']['widget'][0]['value']['#default_value'] = \Drupal::service('user.data')->get('vonage_2fa', \Drupal::currentUser()->id(), 'phone_number');
+}
+
+function vonage_2fa_user_form_validate(&$form, FormStateInterface $form_state) {
+  $value = $form_state->getValue('vonage_2fa_phone_number')[0]['value'];
+
+  if (empty($value)) {
+    return;
+  }
+
+  if (preg_match('/^\+?[1-9]\d{1,14}$/', $value) !== 1) {
+    $form_state->setErrorByName('vonage_2fa_phone_number', 'Please enter a phone number in E.164 format');
+  }
+}
+
+function vonage_2fa_user_form_submit(&$form, FormStateInterface $form_state) {
+  $phone = $form_state->getValue('vonage_2fa_phone_number')[0]['value'];
+
+  \Drupal::service('user.data')->set('vonage_2fa', \Drupal::currentUser()->id(), 'phone_number', $phone);
+  \Drupal::service('user.data')->set('vonage_2fa', \Drupal::currentUser()->id(), 'enabled', true);
 }

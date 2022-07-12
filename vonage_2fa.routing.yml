@@ -6,14 +6,6 @@ vonage_2fa.api_keys_settings_route:
   requirements:
     _permission: 'access administration pages'
 
-vonage_2fa.user_settings_route:
-  path: '/admin/config/vonage_2fa/user_settings'
-  defaults:
-    _title: 'Vonage 2FA User Settings'
-    _form: '\Drupal\vonage_2fa\Form\VonageUserSettingsForm'
-  requirements:
-    _permission: 'access user profiles, access content'
-
 vonage_2fa.pin_verify:
   path: '/user/login/verify'
   defaults:

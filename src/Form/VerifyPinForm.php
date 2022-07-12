@@ -86,7 +86,7 @@ class VerifyPinForm extends FormBase
     $url = sprintf(
       "https://api.nexmo.com/verify/check/json?&api_key=%s&api_secret=%s&request_id=%s&code=%s",
       $this->config->get('api_key'),
-      $this->config->get('api_secret').
+      $this->config->get('api_secret'),
       $form_state->getValue('request_id'),
       $pin
     );
